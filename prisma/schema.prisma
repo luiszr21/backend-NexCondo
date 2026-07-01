@@ -1,0 +1,133 @@
+// Este é o arquivo de schema do Prisma para o NexCondo.
+// Ele define a modelagem inicial do banco de dados em português.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PerfilUsuario {
+  ADMINISTRADOR
+  FUNCIONARIO
+  MORADOR
+}
+
+enum StatusReserva {
+  PENDENTE
+  APROVADA
+  RECUSADA
+  CANCELADA
+}
+
+enum StatusAviso {
+  ATIVO
+  INATIVO
+}
+
+enum StatusEncomenda {
+  PENDENTE
+  RECEBIDA
+  ENTREGUE
+  DEVOLVIDA
+}
+
+model Usuario {
+  id              String   @id @default(cuid())
+  nome            String
+  email           String   @unique
+  senhaHash       String
+  telefone        String?
+  perfil          PerfilUsuario @default(MORADOR)
+  ativo           Boolean  @default(true)
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  avisos          Aviso[]
+  reservas        Reserva[]
+  encomendasRecebidas Encomenda[] @relation("EncomendaDestinatario")
+  encomendasRegistradas Encomenda[] @relation("EncomendaRegistradaPor")
+
+  @@map("usuarios")
+  @@index([email])
+  @@index([perfil])
+  @@index([ativo])
+}
+
+model AreaComum {
+  id          String   @id @default(cuid())
+  nome        String   @unique
+  descricao   String?
+  capacidade  Int      @default(10)
+  localizacao String?
+  regras      String?
+  ativo       Boolean  @default(true)
+  criadoEm    DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  reservas Reserva[]
+
+  @@map("areas_comuns")
+  @@index([ativo])
+}
+
+model Reserva {
+  id           String          @id @default(cuid())
+  usuarioId    String
+  areaComumId  String
+  dataInicio   DateTime
+  dataFim      DateTime
+  status       StatusReserva   @default(PENDENTE)
+  observacoes  String?
+  criadoEm     DateTime        @default(now())
+  atualizadoEm DateTime        @updatedAt
+
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  areaComum AreaComum @relation(fields: [areaComumId], references: [id], onDelete: Restrict)
+
+  @@map("reservas")
+  @@index([usuarioId, status])
+  @@index([areaComumId, dataInicio, dataFim])
+  @@index([status])
+}
+
+model Aviso {
+  id           String          @id @default(cuid())
+  titulo       String
+  conteudo     String
+  autorId      String
+  status       StatusAviso     @default(ATIVO)
+  publicadoEm  DateTime        @default(now())
+  criadoEm     DateTime        @default(now())
+  atualizadoEm DateTime        @updatedAt
+
+  autor Usuario @relation(fields: [autorId], references: [id], onDelete: Cascade)
+
+  @@map("avisos")
+  @@index([status, publicadoEm])
+  @@index([autorId])
+}
+
+model Encomenda {
+  id               String            @id @default(cuid())
+  codigoRastreio   String?           @unique
+  descricao        String
+  destinatarioId   String
+  registradaPorId  String?
+  status           StatusEncomenda   @default(PENDENTE)
+  recebidaEm       DateTime?
+  entregueEm       DateTime?
+  observacoes      String?
+  criadoEm         DateTime          @default(now())
+  atualizadoEm     DateTime          @updatedAt
+
+  destinatario   Usuario @relation("EncomendaDestinatario", fields: [destinatarioId], references: [id], onDelete: Cascade)
+  registradaPor  Usuario? @relation("EncomendaRegistradaPor", fields: [registradaPorId], references: [id], onDelete: SetNull)
+
+  @@map("encomendas")
+  @@index([destinatarioId, status])
+  @@index([status])
+  @@index([registradaPorId])
+}
