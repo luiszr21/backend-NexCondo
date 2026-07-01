@@ -96,17 +96,19 @@ model Reserva {
 model Aviso {
   id           String          @id @default(cuid())
   titulo       String
-  conteudo     String
+  descricao    String
+  categoria    String
   autorId      String
   status       StatusAviso     @default(ATIVO)
   publicadoEm  DateTime        @default(now())
+  expiraEm     DateTime
   criadoEm     DateTime        @default(now())
   atualizadoEm DateTime        @updatedAt
 
   autor Usuario @relation(fields: [autorId], references: [id], onDelete: Cascade)
 
   @@map("avisos")
-  @@index([status, publicadoEm])
+  @@index([status, publicadoEm, expiraEm])
   @@index([autorId])
 }
 
